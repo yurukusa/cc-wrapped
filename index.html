@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Wrapped — Your AI Year in Review</title>
+<meta name="description" content="Spotify Wrapped, but for Claude Code. See your AI usage stats in a beautiful, shareable format.">
+<meta property="og:title" content="CC Wrapped — Your AI Year in Review">
+<meta property="og:description" content="How much time did you spend with AI? Find out with CC Wrapped.">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-card: #12122a;
+  --accent-1: #7c3aed;
+  --accent-2: #f97316;
+  --accent-3: #06b6d4;
+  --accent-4: #ec4899;
+  --accent-5: #10b981;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Landing / Input Screen */
+#input-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+#input-screen h1 {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-4));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+#input-screen .subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.input-box {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.input-box label {
+  display: block;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.input-box code {
+  display: inline-block;
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--accent-1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.input-box textarea {
+  width: 100%;
+  height: 180px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  resize: vertical;
+}
+
+.input-box textarea::placeholder { color: var(--text-muted); }
+.input-box textarea:focus { outline: none; border-color: var(--accent-1); }
+
+.btn-generate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-4));
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-generate:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4);
+}
+
+.demo-link {
+  display: block;
+  margin-top: 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.demo-link:hover { color: var(--accent-3); }
+
+.error-msg {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  min-height: 1.2em;
+}
+
+/* Slide Show */
+#slideshow {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 100;
+}
+
+.slide {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+
+.slide.active {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* Slide backgrounds */
+.slide-hero { background: linear-gradient(150deg, #0a0a2e 0%, #1a0a3e 40%, #2d1054 100%); }
+.slide-sessions { background: linear-gradient(150deg, #0a1a2e 0%, #0a2a4e 40%, #0d3a6e 100%); }
+.slide-personality { background: linear-gradient(150deg, #1a0a2e 0%, #3a0a4e 40%, #5c1078 100%); }
+.slide-project { background: linear-gradient(150deg, #0a2e1a 0%, #0a4e2a 40%, #107844 100%); }
+.slide-records { background: linear-gradient(150deg, #2e1a0a 0%, #4e2a0a 40%, #783810 100%); }
+.slide-fun { background: linear-gradient(150deg, #2e0a1a 0%, #4e0a2a 40%, #781044 100%); }
+.slide-final { background: linear-gradient(150deg, #0a0a2e 0%, #1a0a3e 50%, #2d1054 100%); }
+
+/* Common slide typography */
+.slide .pre-title {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 1rem;
+}
+
+.slide .big-number {
+  font-size: clamp(3rem, 12vw, 7rem);
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.slide .big-label {
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slide .stat-row {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.slide .stat-item {
+  text-align: center;
+}
+
+.slide .stat-item .stat-val {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.slide .stat-item .stat-lbl {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.2rem;
+}
+
+/* Personality card */
+.personality-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.personality-name {
+  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.personality-desc {
+  max-width: 400px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Day of week bars */
+.dow-bars {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  height: 120px;
+  margin-top: 1.5rem;
+}
+
+.dow-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 50px;
+}
+
+.dow-bar .bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 1s ease;
+}
+
+.dow-bar .bar-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dow-bar .bar-val {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Project breakdown */
+.project-list {
+  text-align: left;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 1rem;
+}
+
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.project-rank {
+  font-size: 1.5rem;
+  font-weight: 800;
+  width: 2rem;
+  text-align: center;
+  opacity: 0.4;
+}
+
+.project-rank.top { opacity: 1; color: var(--accent-5); font-size: 2rem; }
+
+.project-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.project-hours {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+/* Fun facts */
+.fun-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  text-align: left;
+  max-width: 420px;
+}
+
+.fun-fact {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.fun-fact .ff-icon { font-size: 1.5rem; flex-shrink: 0; }
+.fun-fact .ff-text { color: rgba(255, 255, 255, 0.8); line-height: 1.5; }
+.fun-fact .ff-text strong { color: white; }
+
+/* Final card (shareable) */
+.final-card {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 380px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.final-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(124, 58, 237, 0.1) 25%, transparent 50%, rgba(249, 115, 22, 0.1) 75%, transparent 100%);
+  animation: cardShine 8s linear infinite;
+}
+
+@keyframes cardShine { to { transform: rotate(360deg); } }
+
+.final-card > * { position: relative; z-index: 1; }
+
+.final-card .fc-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--accent-1);
+  margin-bottom: 1.2rem;
+}
+
+.final-card .fc-big {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 0.3rem;
+}
+
+.final-card .fc-sub {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.final-card .fc-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.final-card .fc-stat {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.final-card .fc-stat-val {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.final-card .fc-stat-lbl {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.final-card .fc-personality {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(249, 115, 22, 0.2));
+  border-radius: 10px;
+  text-align: center;
+}
+
+.final-card .fc-personality-icon { font-size: 1.5rem; }
+.final-card .fc-personality-name { font-weight: 600; font-size: 0.9rem; margin-top: 0.2rem; }
+
+.final-card .fc-footer {
+  margin-top: 1.2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* Share buttons */
+.share-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.share-btn:hover { transform: translateY(-1px); }
+.share-btn:active { transform: translateY(0); opacity: 0.9; }
+
+.share-btn.twitter { background: #1d9bf0; color: white; }
+.share-btn.copy { background: rgba(255, 255, 255, 0.15); color: white; }
+.share-btn.download { background: linear-gradient(135deg, var(--accent-1), var(--accent-4)); color: white; }
+.share-btn.restart { background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); }
+
+/* Navigation */
+.slide-nav {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 200;
+}
+
+.slide-nav .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.slide-nav .dot.active {
+  background: white;
+  transform: scale(1.3);
+}
+
+.slide-tap-hint {
+  position: fixed;
+  bottom: 3.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.75rem;
+  z-index: 200;
+  animation: fadeInOut 3s ease infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Canvas (hidden, for PNG export) */
+#share-canvas { display: none; }
+
+/* Toolkit footer */
+.toolkit-footer {
+  padding: 1.5rem 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.toolkit-footer a {
+  color: var(--accent-1);
+  text-decoration: none;
+}
+
+.toolkit-footer a:hover { text-decoration: underline; }
+
+/* Animations */
+.slide.active .big-number { animation: countUp 0.8s ease-out; }
+.slide.active .personality-icon { animation: bounceIn 0.6s ease; }
+.slide.active .dow-bar .bar { animation: growBar 1s ease-out; }
+
+@keyframes countUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bounceIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+@keyframes growBar { from { height: 0 !important; } }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .stat-row { gap: 1rem; }
+  .dow-bars { gap: 4px; }
+  .final-card { padding: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Input Screen -->
+<div id="input-screen">
+  <h1>CC Wrapped</h1>
+  <p class="subtitle">Your AI usage, beautifully wrapped.</p>
+
+  <div class="input-box">
+    <label>Paste your <code>npx cc-session-stats --json</code> output:</label>
+    <textarea id="json-input" placeholder='{"version":"1.0","totalSessions":3408,"totalHours":104.53,...}'></textarea>
+    <div class="error-msg" id="error-msg"></div>
+    <button class="btn-generate" onclick="generateWrapped()">Unwrap My Stats</button>
+    <span class="demo-link" onclick="loadDemo()">Try with demo data</span>
+  </div>
+
+  <div class="toolkit-footer">
+    Part of <a href="https://github.com/yurukusa/cc-session-stats">cc-toolkit</a> &mdash;
+    <a href="https://yurukusa.github.io/cc-health-check/">Health Check</a> &middot;
+    <a href="https://github.com/yurukusa/cc-session-stats">Session Stats</a> &middot;
+    <a href="https://github.com/yurukusa/cc-audit-log">Audit Log</a> &middot;
+    <a href="https://yurukusa.github.io/cc-cost-check/">Cost Check</a>
+  </div>
+</div>
+
+<!-- Slideshow -->
+<div id="slideshow">
+  <!-- Slide 0: Hero -->
+  <div class="slide slide-hero" id="slide-0">
+    <div class="pre-title">Your AI Year in Review</div>
+    <div class="big-number" id="hero-hours">—</div>
+    <div class="big-label">hours with AI</div>
+    <div class="stat-row">
+      <div class="stat-item">
+        <div class="stat-val" id="hero-sessions">—</div>
+        <div class="stat-lbl">sessions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="hero-days">—</div>
+        <div class="stat-lbl">days</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 1: Sessions deep-dive -->
+  <div class="slide slide-sessions" id="slide-1">
+    <div class="pre-title">Your Rhythm</div>
+    <div class="big-label" style="margin-bottom: 1rem;">Hours by day of week</div>
+    <div class="dow-bars" id="dow-bars"></div>
+    <div style="margin-top: 1.5rem;">
+      <div class="stat-item">
+        <div class="stat-val" id="busiest-day">—</div>
+        <div class="stat-lbl">is your busiest day</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 2: Personality -->
+  <div class="slide slide-personality" id="slide-2">
+    <div class="pre-title">Your AI Personality</div>
+    <div class="personality-icon" id="personality-icon">—</div>
+    <div class="personality-name" id="personality-name">—</div>
+    <div class="personality-desc" id="personality-desc">—</div>
+  </div>
+
+  <!-- Slide 3: Top Project -->
+  <div class="slide slide-project" id="slide-3">
+    <div class="pre-title">Where You Spent Your Time</div>
+    <div class="project-list" id="project-list"></div>
+  </div>
+
+  <!-- Slide 4: Records -->
+  <div class="slide slide-records" id="slide-4">
+    <div class="pre-title">Your Records</div>
+    <div class="big-number" id="record-streak">—</div>
+    <div class="big-label">day streak</div>
+    <div class="stat-row" style="margin-top: 2rem;">
+      <div class="stat-item">
+        <div class="stat-val" id="record-longest">—</div>
+        <div class="stat-lbl">longest session</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="record-avg">—</div>
+        <div class="stat-lbl">avg per day</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="record-week">—</div>
+        <div class="stat-lbl">last 7 days</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: Fun Facts -->
+  <div class="slide slide-fun" id="slide-5">
+    <div class="pre-title">Fun Facts</div>
+    <div class="fun-facts" id="fun-facts"></div>
+  </div>
+
+  <!-- Slide 6: Final Card -->
+  <div class="slide slide-final" id="slide-6">
+    <div class="final-card" id="final-card">
+      <div class="fc-header">CC Wrapped 2026</div>
+      <div class="fc-big" id="fc-hours">—</div>
+      <div class="fc-sub" id="fc-sub">—</div>
+      <div class="fc-stats">
+        <div class="fc-stat">
+          <div class="fc-stat-val" id="fc-sessions">—</div>
+          <div class="fc-stat-lbl">sessions</div>
+        </div>
+        <div class="fc-stat">
+          <div class="fc-stat-val" id="fc-streak">—</div>
+          <div class="fc-stat-lbl">day streak</div>
+        </div>
+        <div class="fc-stat">
+          <div class="fc-stat-val" id="fc-active">—</div>
+          <div class="fc-stat-lbl">active days</div>
+        </div>
+        <div class="fc-stat">
+          <div class="fc-stat-val" id="fc-longest">—</div>
+          <div class="fc-stat-lbl">longest session</div>
+        </div>
+      </div>
+      <div class="fc-personality">
+        <div class="fc-personality-icon" id="fc-pers-icon">—</div>
+        <div class="fc-personality-name" id="fc-pers-name">—</div>
+      </div>
+      <div class="fc-footer">yurukusa.github.io/cc-wrapped</div>
+    </div>
+
+    <div class="share-row">
+      <button class="share-btn twitter" onclick="shareTwitter()">Share on X</button>
+      <button class="share-btn download" onclick="downloadCard()">Save Image</button>
+      <button class="share-btn copy" onclick="copyText()">Copy Text</button>
+      <button class="share-btn restart" onclick="restart()">Start Over</button>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="slide-tap-hint" id="tap-hint">Tap anywhere to continue</div>
+  <div class="slide-nav" id="slide-nav"></div>
+</div>
+
+<canvas id="share-canvas" width="760" height="1000"></canvas>
+
+<script>
+const DEMO_DATA = {
+  version: "1.0",
+  totalSessions: 3408,
+  totalHours: 104.53,
+  activeDays: 47,
+  totalDaysSpan: 50,
+  firstSeen: "2026-01-10",
+  lastSeen: "2026-02-28",
+  averages: { perSession: 0.03, perDay: 2.22 },
+  longestSession: { hours: 6.17, date: "2026-02-28", project: "cc-loop" },
+  hoursByDayOfWeek: { Sun: 20.27, Mon: 17.2, Tue: 8, Wed: 5.79, Thu: 19.7, Fri: 20.52, Sat: 13.09 },
+  topProjects: [
+    { name: "~", hours: 89.47 },
+    { name: "cc-loop", hours: 10.51 },
+    { name: "spell-cascade", hours: 1.9 },
+    { name: "dung-azure-flame", hours: 1.79 },
+    { name: "tools-multi-agent-shogun", hours: 0.46 }
+  ],
+  streak: 35,
+  healthWarnings: [],
+  last7Days: { hours: 27.17, activeDays: 7 }
+};
+
+let data = null;
+let currentSlide = 0;
+const totalSlides = 7;
+
+// Personality types based on peak hours and patterns
+const PERSONALITIES = {
+  night_owl: {
+    icon: "\uD83E\uDD89",
+    name: "Night Owl",
+    desc: "You and your AI do your best work when the world is asleep. Your peak hours are after midnight. The quiet darkness is where clarity lives."
+  },
+  early_bird: {
+    icon: "\uD83D\uDC26",
+    name: "Early Bird",
+    desc: "Dawn is your power hour. While others hit snooze, you and your AI are already shipping features. Morning light, fresh context."
+  },
+  weekend_warrior: {
+    icon: "\u2694\uFE0F",
+    name: "Weekend Warrior",
+    desc: "Weekdays are for the day job. Weekends are for the real work. Saturday and Sunday are when you truly come alive with AI."
+  },
+  marathon_runner: {
+    icon: "\uD83C\uDFC3",
+    name: "Marathon Runner",
+    desc: "Your sessions are long and deep. You don't dabble \u2014 you immerse. Multi-hour sessions are your natural state."
+  },
+  daily_grinder: {
+    icon: "\u26A1",
+    name: "Daily Grinder",
+    desc: "Consistency is your superpower. Short, frequent sessions across many days. You show up every single day and the results compound."
+  },
+  hyperfocused: {
+    icon: "\uD83C\uDFAF",
+    name: "Hyperfocused",
+    desc: "One project dominates your time. You don't scatter \u2014 you pour everything into your primary mission. Depth over breadth."
+  },
+  polymath: {
+    icon: "\uD83C\uDF10",
+    name: "Polymath",
+    desc: "Multiple projects, multiple domains. You use AI across a wide range of tasks. Your curiosity has no boundaries."
+  },
+  all_in: {
+    icon: "\uD83D\uDD25",
+    name: "All In",
+    desc: "The numbers don't lie: you live and breathe AI. Your usage is off the charts. This isn't a tool \u2014 it's a way of life."
+  }
+};
+
+function determinePersonality(d) {
+  const dow = d.hoursByDayOfWeek || {};
+  const weekendHours = (dow.Sat || 0) + (dow.Sun || 0);
+  const weekdayHours = (dow.Mon || 0) + (dow.Tue || 0) + (dow.Wed || 0) + (dow.Thu || 0) + (dow.Fri || 0);
+  const totalDow = weekendHours + weekdayHours;
+
+  const longestHrs = d.longestSession ? d.longestSession.hours : 0;
+  const avgPerDay = d.averages ? d.averages.perDay : 0;
+  const streak = d.streak || 0;
+  const projects = d.topProjects || [];
+
+  // Weekend warrior: >45% of hours on weekends
+  if (totalDow > 0 && weekendHours / totalDow > 0.45) return PERSONALITIES.weekend_warrior;
+
+  // All in: >80 total hours or >3h/day average
+  if (d.totalHours > 80 || avgPerDay > 3) return PERSONALITIES.all_in;
+
+  // Marathon runner: longest session > 4h
+  if (longestHrs > 4) return PERSONALITIES.marathon_runner;
+
+  // Daily grinder: streak > 20 and short avg sessions
+  if (streak > 20 && d.averages && d.averages.perSession < 0.1) return PERSONALITIES.daily_grinder;
+
+  // Hyperfocused: top project > 80% of hours
+  if (projects.length > 0 && d.totalHours > 0 && projects[0].hours / d.totalHours > 0.8) return PERSONALITIES.hyperfocused;
+
+  // Polymath: 4+ projects with significant hours
+  const significantProjects = projects.filter(p => p.hours > d.totalHours * 0.05).length;
+  if (significantProjects >= 4) return PERSONALITIES.polymath;
+
+  // Check day-of-week peak for night owl / early bird
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let peakDay = 'Mon';
+  let peakVal = 0;
+  days.forEach(day => {
+    if ((dow[day] || 0) > peakVal) { peakVal = dow[day] || 0; peakDay = day; }
+  });
+
+  // If Friday/Saturday are peak, lean night owl
+  if (peakDay === 'Fri' || peakDay === 'Sat') return PERSONALITIES.night_owl;
+  // If Monday/Tuesday are peak, lean early bird
+  if (peakDay === 'Mon' || peakDay === 'Tue') return PERSONALITIES.early_bird;
+
+  return PERSONALITIES.daily_grinder;
+}
+
+function generateFunFacts(d) {
+  const facts = [];
+  const hours = d.totalHours || 0;
+  const sessions = d.totalSessions || 0;
+
+  // Movie comparison
+  const movies = Math.floor(hours / 2);
+  if (movies > 0) facts.push({ icon: "\uD83C\uDFAC", text: "That's <strong>" + movies + " movies</strong> worth of AI time" });
+
+  // Coffee comparison (1 cup per 45 min of work)
+  const coffees = Math.floor(hours * 60 / 45);
+  if (coffees > 0) facts.push({ icon: "\u2615", text: "If you drank a coffee every 45 min, that's <strong>" + coffees + " cups</strong>" });
+
+  // Sessions per day
+  if (d.activeDays > 0) {
+    const spd = Math.round(sessions / d.activeDays);
+    facts.push({ icon: "\uD83D\uDD04", text: "<strong>" + spd + " sessions per active day</strong> on average" });
+  }
+
+  // Streak
+  if (d.streak > 7) {
+    facts.push({ icon: "\uD83D\uDD25", text: "<strong>" + d.streak + "-day streak</strong> \u2014 that's " + Math.round(d.streak / 7) + " weeks without a day off" });
+  }
+
+  // Longest session
+  if (d.longestSession && d.longestSession.hours > 1) {
+    const h = d.longestSession.hours;
+    const marathons = (h / 4.5).toFixed(1);
+    facts.push({ icon: "\u23F1\uFE0F", text: "Longest session: <strong>" + h.toFixed(1) + "h</strong>. That's " + marathons + "x a marathon movie" });
+  }
+
+  // Last 7 days intensity
+  if (d.last7Days && d.last7Days.hours > 0) {
+    const pct = d.totalHours > 0 ? Math.round(d.last7Days.hours / d.totalHours * 100) : 0;
+    facts.push({ icon: "\uD83D\uDCC8", text: "Last 7 days: <strong>" + d.last7Days.hours.toFixed(1) + "h</strong> (" + pct + "% of all time)" });
+  }
+
+  return facts.slice(0, 5);
+}
+
+function loadDemo() {
+  document.getElementById('json-input').value = JSON.stringify(DEMO_DATA, null, 2);
+}
+
+function parseInput(raw) {
+  try {
+    const d = JSON.parse(raw);
+    if (!d.totalSessions && !d.totalHours) throw new Error('Missing key fields');
+    return d;
+  } catch (e) {
+    return null;
+  }
+}
+
+function generateWrapped() {
+  const raw = document.getElementById('json-input').value.trim();
+  if (!raw) {
+    document.getElementById('error-msg').textContent = 'Paste your cc-session-stats --json output first.';
+    return;
+  }
+  data = parseInput(raw);
+  if (!data) {
+    document.getElementById('error-msg').textContent = 'Could not parse JSON. Make sure it\'s the output of cc-session-stats --json.';
+    return;
+  }
+  document.getElementById('error-msg').textContent = '';
+  renderSlides();
+  showSlideshow();
+}
+
+function renderSlides() {
+  // Hero
+  document.getElementById('hero-hours').textContent = Math.round(data.totalHours);
+  document.getElementById('hero-sessions').textContent = data.totalSessions.toLocaleString();
+  document.getElementById('hero-days').textContent = data.totalDaysSpan;
+
+  // Day of week bars
+  const dow = data.hoursByDayOfWeek || {};
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const maxDow = Math.max(...days.map(d => dow[d] || 0), 1);
+  const barsEl = document.getElementById('dow-bars');
+  barsEl.innerHTML = '';
+
+  let busiestDay = 'Mon';
+  let busiestVal = 0;
+
+  const barColors = ['#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95', '#ec4899', '#f97316', '#06b6d4'];
+
+  days.forEach((day, i) => {
+    const val = dow[day] || 0;
+    if (val > busiestVal) { busiestVal = val; busiestDay = day; }
+    const pct = Math.max(val / maxDow * 100, 3);
+    const col = document.createElement('div');
+    col.className = 'dow-bar';
+    col.innerHTML =
+      '<div class="bar-val">' + val.toFixed(1) + 'h</div>' +
+      '<div class="bar" style="height:' + pct + '%;background:' + barColors[i] + ';"></div>' +
+      '<div class="bar-label">' + day + '</div>';
+    barsEl.appendChild(col);
+  });
+  document.getElementById('busiest-day').textContent = busiestDay;
+
+  // Personality
+  const personality = determinePersonality(data);
+  document.getElementById('personality-icon').textContent = personality.icon;
+  document.getElementById('personality-name').textContent = personality.name;
+  document.getElementById('personality-desc').textContent = personality.desc;
+
+  // Projects
+  const projectList = document.getElementById('project-list');
+  projectList.innerHTML = '';
+  const projects = (data.topProjects || []).slice(0, 5);
+  projects.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'project-row';
+    row.innerHTML =
+      '<div class="project-rank' + (i === 0 ? ' top' : '') + '">' + (i + 1) + '</div>' +
+      '<div class="project-name">' + escapeHtml(p.name) + '</div>' +
+      '<div class="project-hours">' + p.hours.toFixed(1) + 'h</div>';
+    projectList.appendChild(row);
+  });
+
+  // Records
+  document.getElementById('record-streak').textContent = data.streak || data.activeDays || '?';
+  document.getElementById('record-longest').textContent = data.longestSession ? data.longestSession.hours.toFixed(1) + 'h' : '?';
+  document.getElementById('record-avg').textContent = data.averages ? data.averages.perDay.toFixed(1) + 'h' : '?';
+  document.getElementById('record-week').textContent = data.last7Days ? data.last7Days.hours.toFixed(1) + 'h' : '?';
+
+  // Fun facts
+  const factsEl = document.getElementById('fun-facts');
+  factsEl.innerHTML = '';
+  generateFunFacts(data).forEach(f => {
+    const d = document.createElement('div');
+    d.className = 'fun-fact';
+    d.innerHTML = '<div class="ff-icon">' + f.icon + '</div><div class="ff-text">' + f.text + '</div>';
+    factsEl.appendChild(d);
+  });
+
+  // Final card
+  document.getElementById('fc-hours').textContent = Math.round(data.totalHours) + ' hours';
+  document.getElementById('fc-sub').textContent = data.totalSessions.toLocaleString() + ' sessions \u00B7 ' + data.totalDaysSpan + ' days';
+  document.getElementById('fc-sessions').textContent = data.totalSessions.toLocaleString();
+  document.getElementById('fc-streak').textContent = data.streak || data.activeDays || '?';
+  document.getElementById('fc-active').textContent = data.activeDays;
+  document.getElementById('fc-longest').textContent = data.longestSession ? data.longestSession.hours.toFixed(1) + 'h' : '?';
+  document.getElementById('fc-pers-icon').textContent = personality.icon;
+  document.getElementById('fc-pers-name').textContent = personality.name;
+
+  // Nav dots
+  const nav = document.getElementById('slide-nav');
+  nav.innerHTML = '';
+  for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goToSlide(i);
+    nav.appendChild(dot);
+  }
+}
+
+function showSlideshow() {
+  document.getElementById('input-screen').style.display = 'none';
+  document.getElementById('slideshow').style.display = 'block';
+  currentSlide = 0;
+  updateSlide();
+
+  // Click/touch to advance
+  document.getElementById('slideshow').addEventListener('click', (e) => {
+    if (e.target.closest('.share-btn') || e.target.closest('.slide-nav') || e.target.closest('.final-card')) return;
+    if (currentSlide < totalSlides - 1) {
+      currentSlide++;
+      updateSlide();
+    }
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      if (currentSlide < totalSlides - 1) { currentSlide++; updateSlide(); }
+    } else if (e.key === 'ArrowLeft') {
+      if (currentSlide > 0) { currentSlide--; updateSlide(); }
+    }
+  });
+}
+
+function updateSlide() {
+  document.querySelectorAll('.slide').forEach((s, i) => {
+    s.classList.toggle('active', i === currentSlide);
+  });
+  document.querySelectorAll('.slide-nav .dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentSlide);
+  });
+  // Hide tap hint on last slide
+  document.getElementById('tap-hint').style.display = currentSlide >= totalSlides - 1 ? 'none' : 'block';
+}
+
+function goToSlide(n) {
+  currentSlide = n;
+  updateSlide();
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Share functions
+function shareTwitter() {
+  if (!data) return;
+  const personality = determinePersonality(data);
+  const text = 'My CC Wrapped:\n\n' +
+    Math.round(data.totalHours) + ' hours with AI\n' +
+    data.totalSessions.toLocaleString() + ' sessions\n' +
+    (data.streak || data.activeDays) + '-day streak\n' +
+    'Personality: ' + personality.icon + ' ' + personality.name + '\n\n' +
+    'Get yours:';
+  const url = 'https://yurukusa.github.io/cc-wrapped/';
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url), '_blank');
+}
+
+function copyText() {
+  if (!data) return;
+  const personality = determinePersonality(data);
+  const text = 'CC Wrapped 2026\n' +
+    Math.round(data.totalHours) + ' hours \u00B7 ' + data.totalSessions.toLocaleString() + ' sessions \u00B7 ' + data.totalDaysSpan + ' days\n' +
+    'Streak: ' + (data.streak || data.activeDays) + ' days\n' +
+    'Personality: ' + personality.icon + ' ' + personality.name + '\n' +
+    'https://yurukusa.github.io/cc-wrapped/';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.share-btn.copy');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function downloadCard() {
+  if (!data) return;
+  const canvas = document.getElementById('share-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 760, H = 1000;
+  canvas.width = W;
+  canvas.height = H;
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#0a0a2e');
+  grad.addColorStop(0.5, '#1a0a3e');
+  grad.addColorStop(1, '#2d1054');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Card background
+  const cardX = 40, cardY = 40, cardW = W - 80, cardH = H - 80;
+  ctx.fillStyle = '#12122a';
+  roundRect(ctx, cardX, cardY, cardW, cardH, 20);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = 'rgba(124, 58, 237, 0.3)';
+  ctx.lineWidth = 2;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 20);
+  ctx.stroke();
+
+  // Header
+  ctx.fillStyle = '#7c3aed';
+  ctx.font = '600 14px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CC WRAPPED 2026', W / 2, 100);
+
+  // Big hours
+  ctx.fillStyle = '#f1f5f9';
+  ctx.font = '900 72px -apple-system, sans-serif';
+  ctx.fillText(Math.round(data.totalHours) + ' hours', W / 2, 200);
+
+  // Sub text
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '400 20px -apple-system, sans-serif';
+  ctx.fillText(data.totalSessions.toLocaleString() + ' sessions \u00B7 ' + data.totalDaysSpan + ' days', W / 2, 240);
+
+  // Stats grid
+  const statsData = [
+    { val: data.totalSessions.toLocaleString(), lbl: 'Sessions' },
+    { val: (data.streak || data.activeDays) + '', lbl: 'Day Streak' },
+    { val: data.activeDays + '', lbl: 'Active Days' },
+    { val: data.longestSession ? data.longestSession.hours.toFixed(1) + 'h' : '?', lbl: 'Longest Session' }
+  ];
+
+  const gridStartY = 290;
+  statsData.forEach((s, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = cardX + 50 + col * (cardW / 2 - 30);
+    const y = gridStartY + row * 110;
+    const bw = cardW / 2 - 70;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    roundRect(ctx, x, y, bw, 90, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = '700 28px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.val, x + bw / 2, y + 40);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '400 13px -apple-system, sans-serif';
+    ctx.fillText(s.lbl, x + bw / 2, y + 65);
+  });
+
+  // Personality
+  const personality = determinePersonality(data);
+  const persY = gridStartY + 250;
+
+  const persGrad = ctx.createLinearGradient(cardX + 50, persY, cardX + cardW - 50, persY + 80);
+  persGrad.addColorStop(0, 'rgba(124, 58, 237, 0.2)');
+  persGrad.addColorStop(1, 'rgba(249, 115, 22, 0.2)');
+  ctx.fillStyle = persGrad;
+  roundRect(ctx, cardX + 50, persY, cardW - 100, 80, 10);
+  ctx.fill();
+
+  ctx.font = '32px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillText(personality.icon, W / 2, persY + 35);
+
+  ctx.font = '600 18px -apple-system, sans-serif';
+  ctx.fillText(personality.name, W / 2, persY + 62);
+
+  // Day of week mini bars
+  const dow = data.hoursByDayOfWeek || {};
+  const dowDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const maxDow = Math.max(...dowDays.map(d => dow[d] || 0), 1);
+  const barStartX = cardX + 80;
+  const barWidth = (cardW - 160) / 7;
+  const barBaseY = persY + 200;
+  const barMaxH = 80;
+
+  const dowColors = ['#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95', '#ec4899', '#f97316', '#06b6d4'];
+
+  dowDays.forEach((day, i) => {
+    const val = dow[day] || 0;
+    const h = Math.max((val / maxDow) * barMaxH, 3);
+    const x = barStartX + i * barWidth + 4;
+
+    ctx.fillStyle = dowColors[i];
+    roundRect(ctx, x, barBaseY - h, barWidth - 8, h, 3);
+    ctx.fill();
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '400 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(day, x + (barWidth - 8) / 2, barBaseY + 16);
+  });
+
+  // Fun fact
+  const facts = generateFunFacts(data);
+  if (facts.length > 0) {
+    const factY = barBaseY + 50;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '400 15px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    const factText = facts[0].text.replace(/<\/?strong>/g, '');
+    ctx.fillText(facts[0].icon + ' ' + factText, W / 2, factY);
+  }
+
+  // Footer
+  ctx.fillStyle = '#64748b';
+  ctx.font = '400 12px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('yurukusa.github.io/cc-wrapped', W / 2, H - 60);
+
+  // Download
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cc-wrapped-2026.png';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function restart() {
+  document.getElementById('slideshow').style.display = 'none';
+  document.getElementById('input-screen').style.display = 'flex';
+  currentSlide = 0;
+}
+</script>
+
+</body>
+</html>
