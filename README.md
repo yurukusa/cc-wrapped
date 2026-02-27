@@ -49,6 +49,7 @@ open https://yurukusa.github.io/cc-wrapped/
 | [cc-audit-log](https://github.com/yurukusa/cc-audit-log) | Human-readable audit trail |
 | [cc-cost-check](https://yurukusa.github.io/cc-cost-check/) | Cost per commit calculator |
 | **[cc-wrapped](https://yurukusa.github.io/cc-wrapped/)** | Your AI year in review |
+| [cc-roast](https://yurukusa.github.io/cc-roast/) | Your CLAUDE.md, brutally honest |
 
 ## License
 
