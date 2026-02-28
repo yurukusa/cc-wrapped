@@ -547,7 +547,7 @@ body {
   <button class="lang-toggle-btn" onclick="toggleLang()" id="lang-btn">日本語</button>
 
   <div class="input-box">
-    <label id="input-label">Paste your <code>node cli.mjs --json</code> output:</label>
+    <label id="input-label">Paste your <code>npx cc-session-stats --json</code> output:</label>
     <textarea id="json-input" placeholder='{"version":"1.0","totalSessions":3408,"totalHours":104.53,...}'></textarea>
     <div class="error-msg" id="error-msg"></div>
     <button class="btn-generate" onclick="generateWrapped()" id="unwrap-btn">Unwrap My Stats</button>
@@ -558,6 +558,7 @@ body {
     Part of <a href="https://github.com/yurukusa/cc-session-stats">cc-toolkit</a> &mdash;
     <a href="https://yurukusa.github.io/cc-health-check/">Health Check</a> &middot;
     <a href="https://github.com/yurukusa/cc-session-stats">Session Stats</a> &middot;
+    <a href="https://github.com/yurukusa/cc-personality">Personality</a> &middot;
     <a href="https://github.com/yurukusa/cc-audit-log">Audit Log</a> &middot;
     <a href="https://yurukusa.github.io/cc-cost-check/">Cost Check</a>
   </div>
@@ -1252,7 +1253,7 @@ function applyLang() {
   const ja = currentLang === 'ja';
   document.getElementById('lang-btn').textContent = ja ? 'EN' : '日本語';
   document.getElementById('subtitle-text').textContent = ja ? 'あなたのAI使用履歴、美しくまとめました。' : 'Your AI usage, beautifully wrapped.';
-  document.getElementById('input-label').innerHTML = ja ? 'node cli.mjs --json の出力を貼り付けてください：' : 'Paste your <code>node cli.mjs --json</code> output:';
+  document.getElementById('input-label').innerHTML = ja ? 'npx cc-session-stats --json の出力を貼り付けてください：' : 'Paste your <code>npx cc-session-stats --json</code> output:';
   document.getElementById('unwrap-btn').textContent = ja ? '統計を見る' : 'Unwrap My Stats';
   document.getElementById('demo-link').textContent = ja ? 'デモデータで試す' : 'Try with demo data';
   document.getElementById('tap-hint').textContent = ja ? 'タップして次へ' : 'Tap anywhere to continue';
