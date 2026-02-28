@@ -517,6 +517,19 @@ body {
 @keyframes bounceIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 @keyframes growBar { from { height: 0 !important; } }
 
+.lang-toggle-btn {
+  margin-top: 0.6rem;
+  background: transparent;
+  border: 1px solid var(--accent-1);
+  color: var(--accent-1);
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.lang-toggle-btn:hover { background: rgba(124, 58, 237, 0.15); }
+
 /* Responsive */
 @media (max-width: 480px) {
   .stat-row { gap: 1rem; }
@@ -530,14 +543,15 @@ body {
 <!-- Input Screen -->
 <div id="input-screen">
   <h1>CC Wrapped</h1>
-  <p class="subtitle">Your AI usage, beautifully wrapped.</p>
+  <p class="subtitle" id="subtitle-text">Your AI usage, beautifully wrapped.</p>
+  <button class="lang-toggle-btn" onclick="toggleLang()" id="lang-btn">日本語</button>
 
   <div class="input-box">
-    <label>Paste your <code>npx cc-session-stats --json</code> output:</label>
+    <label id="input-label">Paste your <code>node cli.mjs --json</code> output:</label>
     <textarea id="json-input" placeholder='{"version":"1.0","totalSessions":3408,"totalHours":104.53,...}'></textarea>
     <div class="error-msg" id="error-msg"></div>
-    <button class="btn-generate" onclick="generateWrapped()">Unwrap My Stats</button>
-    <span class="demo-link" onclick="loadDemo()">Try with demo data</span>
+    <button class="btn-generate" onclick="generateWrapped()" id="unwrap-btn">Unwrap My Stats</button>
+    <span class="demo-link" onclick="loadDemo()" id="demo-link">Try with demo data</span>
   </div>
 
   <div class="toolkit-footer">
@@ -553,37 +567,37 @@ body {
 <div id="slideshow">
   <!-- Slide 0: Hero -->
   <div class="slide slide-hero" id="slide-0">
-    <div class="pre-title">Your AI Year in Review</div>
+    <div class="pre-title" id="slide0-pre">Your AI Year in Review</div>
     <div class="big-number" id="hero-hours">—</div>
-    <div class="big-label">hours with AI</div>
+    <div class="big-label" id="slide0-hours-lbl">hours with AI</div>
     <div class="stat-row">
       <div class="stat-item">
         <div class="stat-val" id="hero-sessions">—</div>
-        <div class="stat-lbl">sessions</div>
+        <div class="stat-lbl" id="slide0-sessions-lbl">sessions</div>
       </div>
       <div class="stat-item">
         <div class="stat-val" id="hero-days">—</div>
-        <div class="stat-lbl">days</div>
+        <div class="stat-lbl" id="slide0-days-lbl">days</div>
       </div>
     </div>
   </div>
 
   <!-- Slide 1: Sessions deep-dive -->
   <div class="slide slide-sessions" id="slide-1">
-    <div class="pre-title">Your Rhythm</div>
-    <div class="big-label" style="margin-bottom: 1rem;">Hours by day of week</div>
+    <div class="pre-title" id="slide1-pre">Your Rhythm</div>
+    <div class="big-label" id="slide1-dow-lbl" style="margin-bottom: 1rem;">Hours by day of week</div>
     <div class="dow-bars" id="dow-bars"></div>
     <div style="margin-top: 1.5rem;">
       <div class="stat-item">
         <div class="stat-val" id="busiest-day">—</div>
-        <div class="stat-lbl">is your busiest day</div>
+        <div class="stat-lbl" id="slide1-busiest-lbl">is your busiest day</div>
       </div>
     </div>
   </div>
 
   <!-- Slide 2: Personality -->
   <div class="slide slide-personality" id="slide-2">
-    <div class="pre-title">Your AI Personality</div>
+    <div class="pre-title" id="slide2-pre">Your AI Personality</div>
     <div class="personality-icon" id="personality-icon">—</div>
     <div class="personality-name" id="personality-name">—</div>
     <div class="personality-desc" id="personality-desc">—</div>
@@ -591,34 +605,34 @@ body {
 
   <!-- Slide 3: Top Project -->
   <div class="slide slide-project" id="slide-3">
-    <div class="pre-title">Where You Spent Your Time</div>
+    <div class="pre-title" id="slide3-pre">Where You Spent Your Time</div>
     <div class="project-list" id="project-list"></div>
   </div>
 
   <!-- Slide 4: Records -->
   <div class="slide slide-records" id="slide-4">
-    <div class="pre-title">Your Records</div>
+    <div class="pre-title" id="slide4-pre">Your Records</div>
     <div class="big-number" id="record-streak">—</div>
-    <div class="big-label">day streak</div>
+    <div class="big-label" id="slide4-streak-lbl">day streak</div>
     <div class="stat-row" style="margin-top: 2rem;">
       <div class="stat-item">
         <div class="stat-val" id="record-longest">—</div>
-        <div class="stat-lbl">longest session</div>
+        <div class="stat-lbl" id="slide4-longest-lbl">longest session</div>
       </div>
       <div class="stat-item">
         <div class="stat-val" id="record-avg">—</div>
-        <div class="stat-lbl">avg per day</div>
+        <div class="stat-lbl" id="slide4-avg-lbl">avg per day</div>
       </div>
       <div class="stat-item">
         <div class="stat-val" id="record-week">—</div>
-        <div class="stat-lbl">last 7 days</div>
+        <div class="stat-lbl" id="slide4-week-lbl">last 7 days</div>
       </div>
     </div>
   </div>
 
   <!-- Slide 5: Fun Facts -->
   <div class="slide slide-fun" id="slide-5">
-    <div class="pre-title">Fun Facts</div>
+    <div class="pre-title" id="slide5-pre">Fun Facts</div>
     <div class="fun-facts" id="fun-facts"></div>
   </div>
 
@@ -631,19 +645,19 @@ body {
       <div class="fc-stats">
         <div class="fc-stat">
           <div class="fc-stat-val" id="fc-sessions">—</div>
-          <div class="fc-stat-lbl">sessions</div>
+          <div class="fc-stat-lbl" id="fc-sessions-lbl">sessions</div>
         </div>
         <div class="fc-stat">
           <div class="fc-stat-val" id="fc-streak">—</div>
-          <div class="fc-stat-lbl">day streak</div>
+          <div class="fc-stat-lbl" id="fc-streak-lbl">day streak</div>
         </div>
         <div class="fc-stat">
           <div class="fc-stat-val" id="fc-active">—</div>
-          <div class="fc-stat-lbl">active days</div>
+          <div class="fc-stat-lbl" id="fc-active-lbl">active days</div>
         </div>
         <div class="fc-stat">
           <div class="fc-stat-val" id="fc-longest">—</div>
-          <div class="fc-stat-lbl">longest session</div>
+          <div class="fc-stat-lbl" id="fc-longest-lbl">longest session</div>
         </div>
       </div>
       <div class="fc-personality">
@@ -654,10 +668,10 @@ body {
     </div>
 
     <div class="share-row">
-      <button class="share-btn twitter" onclick="shareTwitter()">Share on X</button>
-      <button class="share-btn download" onclick="downloadCard()">Save Image</button>
-      <button class="share-btn copy" onclick="copyText()">Copy Text</button>
-      <button class="share-btn restart" onclick="restart()">Start Over</button>
+      <button class="share-btn twitter" onclick="shareTwitter()" id="share-twitter-btn">Share on X</button>
+      <button class="share-btn download" onclick="downloadCard()" id="save-btn">Save Image</button>
+      <button class="share-btn copy" onclick="copyText()" id="copy-btn">Copy Text</button>
+      <button class="share-btn restart" onclick="restart()" id="restart-btn">Start Over</button>
     </div>
   </div>
 
@@ -1187,6 +1201,116 @@ function restart() {
   document.getElementById('slideshow').style.display = 'none';
   document.getElementById('input-screen').style.display = 'flex';
   currentSlide = 0;
+}
+
+// ─── 日本語対応 ──────────────────────────────────────────────
+let currentLang = 'en';
+
+const PERSONALITIES_JA = {
+  night_owl:       { name: 'ナイトフクロウ',      desc: 'AIと最高の仕事をするのは世界が眠った後。深夜こそ集中の時間。' },
+  early_bird:      { name: '早起き鳥',            desc: '夜明けが勝負。他がスヌーズを押す頃、もうコードをシップしてる。' },
+  weekend_warrior: { name: 'ウィークエンド戦士',   desc: '平日は本業。週末が本当の仕事。土日のAI時間が全てを語る。' },
+  marathon_runner: { name: 'マラソンランナー',      desc: 'セッションは長く、深く。数時間の没入が普通の状態。' },
+  daily_grinder:   { name: 'デイリーグラインダー', desc: '継続こそ最強。短くても毎日欠かさない。積み重ねが力になる。' },
+  hyperfocused:    { name: 'ハイパーフォーカス型', desc: '一つのプロジェクトに全力集中。広く浅くではなく、深く一点突破。' },
+  polymath:        { name: 'ポリマス',             desc: '複数プロジェクト、複数ドメイン。好奇心に境界線がない。' },
+  all_in:          { name: '全力投球',             desc: '数字は嘘をつかない。AIが生活の一部になっている。ツールじゃない、生き方だ。' },
+};
+
+function generateFunFactsJA(d) {
+  const facts = [];
+  const hours = d.totalHours || 0;
+  const sessions = d.totalSessions || 0;
+  const movies = Math.floor(hours / 2);
+  if (movies > 0) facts.push({ icon: '🎬', text: '<strong>' + movies + '本の映画</strong>分のAI時間' });
+  const coffees = Math.floor(hours * 60 / 45);
+  if (coffees > 0) facts.push({ icon: '☕', text: '45分ごとにコーヒーを飲むと <strong>' + coffees + '杯</strong>' });
+  if (d.activeDays > 0) {
+    const spd = Math.round(sessions / d.activeDays);
+    facts.push({ icon: '🔄', text: 'アクティブな日は平均 <strong>1日' + spd + 'セッション</strong>' });
+  }
+  if (d.streak > 7)
+    facts.push({ icon: '🔥', text: '<strong>' + d.streak + '日連続</strong> — ' + Math.round(d.streak / 7) + '週間休みなし' });
+  if (d.longestSession && d.longestSession.hours > 1) {
+    const h = d.longestSession.hours;
+    facts.push({ icon: '⏱️', text: '最長セッション <strong>' + h.toFixed(1) + '時間</strong> — 映画' + (h / 2).toFixed(1) + '本分' });
+  }
+  if (d.last7Days && d.last7Days.hours > 0) {
+    const pct = d.totalHours > 0 ? Math.round(d.last7Days.hours / d.totalHours * 100) : 0;
+    facts.push({ icon: '📈', text: '直近7日間: <strong>' + d.last7Days.hours.toFixed(1) + '時間</strong>（全体の' + pct + '%）' });
+  }
+  return facts.slice(0, 5);
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'en' ? 'ja' : 'en';
+  applyLang();
+  if (data) renderSlides();
+}
+
+function applyLang() {
+  const ja = currentLang === 'ja';
+  document.getElementById('lang-btn').textContent = ja ? 'EN' : '日本語';
+  document.getElementById('subtitle-text').textContent = ja ? 'あなたのAI使用履歴、美しくまとめました。' : 'Your AI usage, beautifully wrapped.';
+  document.getElementById('input-label').innerHTML = ja ? 'node cli.mjs --json の出力を貼り付けてください：' : 'Paste your <code>node cli.mjs --json</code> output:';
+  document.getElementById('unwrap-btn').textContent = ja ? '統計を見る' : 'Unwrap My Stats';
+  document.getElementById('demo-link').textContent = ja ? 'デモデータで試す' : 'Try with demo data';
+  document.getElementById('tap-hint').textContent = ja ? 'タップして次へ' : 'Tap anywhere to continue';
+  const ids = {
+    'share-twitter-btn': ['X でシェア', 'Share on X'],
+    'save-btn': ['画像を保存', 'Save Image'],
+    'copy-btn': ['コピー', 'Copy Text'],
+    'restart-btn': ['やり直す', 'Start Over'],
+    'slide0-pre': ['あなたのAI記録', 'Your AI Year in Review'],
+    'slide0-hours-lbl': ['AIとの時間（時間）', 'hours with AI'],
+    'slide0-sessions-lbl': ['セッション', 'sessions'],
+    'slide0-days-lbl': ['日間', 'days'],
+    'slide1-pre': ['あなたのリズム', 'Your Rhythm'],
+    'slide1-dow-lbl': ['曜日別の使用時間', 'Hours by day of week'],
+    'slide1-busiest-lbl': ['が最も多い曜日', 'is your busiest day'],
+    'slide2-pre': ['AIパーソナリティ', 'Your AI Personality'],
+    'slide3-pre': ['時間を使った場所', 'Where You Spent Your Time'],
+    'slide4-pre': ['あなたの記録', 'Your Records'],
+    'slide4-streak-lbl': ['日連続', 'day streak'],
+    'slide4-longest-lbl': ['最長セッション', 'longest session'],
+    'slide4-avg-lbl': ['1日平均', 'avg per day'],
+    'slide4-week-lbl': ['直近7日間', 'last 7 days'],
+    'slide5-pre': ['おもしろ統計', 'Fun Facts'],
+    'fc-sessions-lbl': ['セッション', 'sessions'],
+    'fc-streak-lbl': ['日連続', 'day streak'],
+    'fc-active-lbl': ['アクティブ日', 'active days'],
+    'fc-longest-lbl': ['最長セッション', 'longest session'],
+  };
+  Object.entries(ids).forEach(([id, [jpTxt, enTxt]]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = ja ? jpTxt : enTxt;
+  });
+}
+
+// personality 表示を言語対応させるため renderSlides を上書き
+const _origRenderSlides = renderSlides;
+function renderSlides() {
+  _origRenderSlides();
+  if (currentLang === 'ja') {
+    const personality = determinePersonality(data);
+    const pKey = Object.keys(PERSONALITIES).find(k => PERSONALITIES[k] === personality);
+    const jaP = pKey && PERSONALITIES_JA[pKey];
+    if (jaP) {
+      document.getElementById('personality-name').textContent = jaP.name;
+      document.getElementById('personality-desc').textContent = jaP.desc;
+      document.getElementById('fc-pers-name').textContent = jaP.name;
+    }
+    // Replace fun facts with Japanese version
+    const factsEl = document.getElementById('fun-facts');
+    factsEl.innerHTML = '';
+    generateFunFactsJA(data).forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'fun-fact';
+      d.innerHTML = '<div class="ff-icon">' + f.icon + '</div><div class="ff-text">' + f.text + '</div>';
+      factsEl.appendChild(d);
+    });
+    applyLang();
+  }
 }
 </script>
 
