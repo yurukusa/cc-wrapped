@@ -536,6 +536,43 @@ body {
   .dow-bars { gap: 4px; }
   .final-card { padding: 1.5rem; }
 }
+
+/* Directory picker */
+.dir-pick-section {
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+.dir-pick-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: block;
+  margin-bottom: 0.7rem;
+}
+.btn-dir-pick {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-4));
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.btn-dir-pick:hover { opacity: 0.9; transform: translateY(-1px); }
+.dir-status {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
+  min-height: 1.3em;
+}
+.or-divider {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.8rem;
+  margin: 1rem 0 0.8rem;
+  text-align: center;
+  letter-spacing: 1px;
+}
 </style>
 </head>
 <body>
@@ -547,6 +584,16 @@ body {
   <button class="lang-toggle-btn" onclick="toggleLang()" id="lang-btn">日本語</button>
 
   <div class="input-box">
+    <!-- Directory picker — no npx needed -->
+    <div class="dir-pick-section">
+      <label class="dir-pick-label" id="dir-pick-label">Select your <code>~/.claude</code> folder (no install needed):</label>
+      <label class="btn-dir-pick" id="dir-pick-btn">
+        Browse My Claude Folder
+        <input type="file" id="dir-input" webkitdirectory style="display:none" onchange="processDirectory(this.files)">
+      </label>
+      <div class="dir-status" id="dir-status"></div>
+    </div>
+    <div class="or-divider" id="or-divider">— or paste JSON manually —</div>
     <label id="input-label">Paste your <code>npx cc-session-stats --json</code> output:</label>
     <textarea id="json-input" placeholder='{"version":"1.0","totalSessions":3408,"totalHours":104.53,...}'></textarea>
     <div class="error-msg" id="error-msg"></div>
@@ -1254,6 +1301,9 @@ function applyLang() {
   const ja = currentLang === 'ja';
   document.getElementById('lang-btn').textContent = ja ? 'EN' : '日本語';
   document.getElementById('subtitle-text').textContent = ja ? 'あなたのAI使用履歴、美しくまとめました。' : 'Your AI usage, beautifully wrapped.';
+  document.getElementById('dir-pick-label').innerHTML = ja ? '<code>~/.claude</code> フォルダを選択（インストール不要）：' : 'Select your <code>~/.claude</code> folder (no install needed):';
+  document.getElementById('dir-pick-btn').childNodes[0].textContent = ja ? '  Claudeフォルダを選択' : '  Browse My Claude Folder';
+  document.getElementById('or-divider').textContent = ja ? '— またはJSONを手動で貼り付け —' : '— or paste JSON manually —';
   document.getElementById('input-label').innerHTML = ja ? 'npx cc-session-stats --json の出力を貼り付けてください：' : 'Paste your <code>npx cc-session-stats --json</code> output:';
   document.getElementById('unwrap-btn').textContent = ja ? '統計を見る' : 'Unwrap My Stats';
   document.getElementById('demo-link').textContent = ja ? 'デモデータで試す' : 'Try with demo data';
@@ -1287,6 +1337,149 @@ function applyLang() {
     const el = document.getElementById(id);
     if (el) el.textContent = ja ? jpTxt : enTxt;
   });
+}
+
+// ─── Directory picker (no npx needed) ───────────────────────────
+
+function _cleanProjectName(dirName) {
+  if (dirName.startsWith('-tmp')) return '/tmp';
+  const parts = dirName.split('-').filter(Boolean);
+  if (parts[0] === 'home' && parts.length >= 2) {
+    const rest = parts.slice(2);
+    if (rest.length === 0) return '~';
+    if (rest[0] === 'projects') rest.shift();
+    return rest.join('-') || '~';
+  }
+  return dirName;
+}
+
+function _parseTs(jsonLine) {
+  try {
+    const d = JSON.parse(jsonLine);
+    const ts = d.timestamp || d.ts;
+    if (ts) return new Date(ts);
+  } catch {}
+  return null;
+}
+
+async function _readFirstLast(file) {
+  const firstChunk = await file.slice(0, 2048).text();
+  const nl = firstChunk.indexOf('\n');
+  const firstLine = nl >= 0 ? firstChunk.substring(0, nl) : firstChunk.trim();
+  const readSize = Math.min(65536, file.size);
+  const lastChunk = await file.slice(file.size - readSize).text();
+  const lines = lastChunk.split('\n').filter(l => l.trim());
+  const lastLine = lines[lines.length - 1] || firstLine;
+  return { firstLine, lastLine };
+}
+
+function _buildStats(sessions) {
+  sessions.sort((a, b) => a.start - b.start);
+  const totalHours = sessions.reduce((s, x) => s + x.durationHours, 0);
+  const avgDuration = totalHours / sessions.length;
+  const maxSess = sessions.reduce((m, s) => s.durationHours > m.durationHours ? s : m, sessions[0]);
+
+  const byDate = {};
+  for (const s of sessions) {
+    const day = s.start.toLocaleDateString('en-CA');
+    if (!byDate[day]) byDate[day] = 0;
+    byDate[day] += s.durationHours;
+  }
+  const activeDaysList = Object.keys(byDate).sort();
+  const firstDay = activeDaysList[0];
+  const lastDay = activeDaysList[activeDaysList.length - 1];
+  const totalDaysSpan = Math.ceil((new Date(lastDay) - new Date(firstDay)) / 864e5) + 1;
+
+  const dowH = [0, 0, 0, 0, 0, 0, 0];
+  for (const s of sessions) dowH[s.start.getDay()] += s.durationHours;
+
+  const projH = {};
+  for (const s of sessions) projH[s.project] = (projH[s.project] || 0) + s.durationHours;
+
+  let maxStreak = 1, curStreak = 1;
+  for (let i = 1; i < activeDaysList.length; i++) {
+    const diff = (new Date(activeDaysList[i]) - new Date(activeDaysList[i - 1])) / 864e5;
+    if (diff === 1) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
+    else curStreak = 1;
+  }
+
+  const today = new Date().toLocaleDateString('en-CA');
+  const ago7 = new Date(Date.now() - 7 * 864e5).toLocaleDateString('en-CA');
+  const r7days = activeDaysList.filter(d => d > ago7 && d <= today);
+  const r7hours = r7days.reduce((s, d) => s + byDate[d], 0);
+
+  const avgDailyHours = totalHours / activeDaysList.length;
+  const dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hoursByDayOfWeek = {};
+  for (let i = 0; i < 7; i++) hoursByDayOfWeek[dowNames[i]] = Math.round(dowH[i] * 100) / 100;
+
+  const topProjects = Object.entries(projH)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, hours]) => ({ name, hours: Math.round(hours * 100) / 100 }));
+
+  return {
+    version: '1.0',
+    totalSessions: sessions.length,
+    totalHours: Math.round(totalHours * 100) / 100,
+    activeDays: activeDaysList.length,
+    totalDaysSpan,
+    firstSeen: firstDay,
+    lastSeen: lastDay,
+    averages: {
+      perSession: Math.round(avgDuration * 100) / 100,
+      perDay: Math.round(avgDailyHours * 100) / 100,
+    },
+    longestSession: {
+      hours: Math.round(maxSess.durationHours * 100) / 100,
+      date: maxSess.start.toLocaleDateString('en-CA'),
+      project: maxSess.project,
+    },
+    hoursByDayOfWeek,
+    topProjects,
+    streak: maxStreak,
+    healthWarnings: [],
+    last7Days: { hours: Math.round(r7hours * 100) / 100, activeDays: r7days.length },
+  };
+}
+
+async function processDirectory(fileList) {
+  const statusEl = document.getElementById('dir-status');
+  statusEl.textContent = 'Reading…';
+
+  const sessions = [];
+  const files = Array.from(fileList);
+
+  for (const file of files) {
+    const path = file.webkitRelativePath;
+    // Match: .../projects/<proj-dir>/<uuid>.jsonl  (not inside subagents subdir for now)
+    const match = path.match(/projects\/([^/]+)\/[^/]+\.jsonl$/);
+    if (!match) continue;
+    if (file.size < 50) continue;
+
+    const project = _cleanProjectName(match[1]);
+    try {
+      const { firstLine, lastLine } = await _readFirstLast(file);
+      const startTs = _parseTs(firstLine);
+      const endTs = _parseTs(lastLine);
+      if (startTs && endTs) {
+        const ms = endTs - startTs;
+        if (ms >= 0 && ms < 7 * 864e5) {
+          sessions.push({ project, start: startTs, end: endTs, durationHours: ms / 36e5 });
+        }
+      }
+    } catch {}
+  }
+
+  if (sessions.length === 0) {
+    statusEl.textContent = '⚠ No sessions found — make sure you selected the .claude folder';
+    return;
+  }
+
+  statusEl.textContent = '✓ ' + sessions.length + ' sessions loaded';
+  data = _buildStats(sessions);
+  document.getElementById('error-msg').textContent = '';
+  renderSlides();
+  showSlideshow();
 }
 
 // personality 表示を言語対応させるため renderSlides を上書き
