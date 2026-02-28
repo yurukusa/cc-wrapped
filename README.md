@@ -2,7 +2,7 @@
 
 **Spotify Wrapped, but for Claude Code.**
 
-Paste your `cc-session-stats --json` output and get a beautiful, slide-by-slide reveal of your AI usage stats.
+Open in your browser, select your `~/.claude` folder — no npm install needed.
 
 **[Try it now](https://yurukusa.github.io/cc-wrapped/)**
 
@@ -16,15 +16,19 @@ Paste your `cc-session-stats --json` output and get a beautiful, slide-by-slide 
 
 ## How to Use
 
+### Browser mode (no install)
+
+1. Open [CC Wrapped](https://yurukusa.github.io/cc-wrapped/)
+2. Click **"Browse My Claude Folder"**
+3. Select your `~/.claude` directory
+4. Stats are computed client-side — nothing leaves your machine
+
+### CLI mode
+
 ```bash
-# 1. Get your stats
 npx cc-session-stats --json | pbcopy  # macOS
 npx cc-session-stats --json | xclip   # Linux
-
-# 2. Open CC Wrapped
-open https://yurukusa.github.io/cc-wrapped/
-
-# 3. Paste and unwrap
+# then paste into CC Wrapped
 ```
 
 ## Personality Types
