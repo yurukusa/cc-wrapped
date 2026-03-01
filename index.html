@@ -1382,7 +1382,10 @@ function _buildStats(sessions) {
   sessions.sort((a, b) => a.start - b.start);
   const totalHours = sessions.reduce((s, x) => s + x.durationHours, 0);
   const avgDuration = totalHours / sessions.length;
-  const maxSess = sessions.reduce((m, s) => s.durationHours > m.durationHours ? s : m, sessions[0]);
+  // Sessions >8h are likely autonomous/continuous runs (cc-loop etc), not single interactive sessions
+  const interactiveSessions = sessions.filter(s => s.durationHours <= 8);
+  const maxSessBase = interactiveSessions.length > 0 ? interactiveSessions : sessions;
+  const maxSess = maxSessBase.reduce((m, s) => s.durationHours > m.durationHours ? s : m, maxSessBase[0]);
 
   const byDate = {};
   for (const s of sessions) {
