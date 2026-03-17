@@ -58,3 +58,7 @@ npx cc-session-stats --json | xclip   # Linux
 ## License
 
 MIT
+
+### Want to optimize how Claude Code uses its tools?
+
+**[Claude Code Ops Kit](https://yurukusa.github.io/cc-ops-kit-landing/?utm_source=github&utm_medium=readme&utm_campaign=cc-wrapped)** ($19) — 10 production hooks + 6 templates + 3 tools. Built from 140+ hours of autonomous operation.
