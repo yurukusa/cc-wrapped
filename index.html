@@ -1061,15 +1061,32 @@ function escapeHtml(str) {
 }
 
 // Share functions
+// 言語に合わせて personality の名前を返す(画面表示と同じ PERSONALITIES_JA を使う)
+function personalityName(personality) {
+  if (currentLang !== 'ja') return personality.name;
+  const pKey = Object.keys(PERSONALITIES).find(k => PERSONALITIES[k] === personality);
+  return (pKey && PERSONALITIES_JA[pKey]) ? PERSONALITIES_JA[pKey].name : personality.name;
+}
+
 function shareTwitter() {
   if (!data) return;
   const personality = determinePersonality(data);
-  const text = 'My CC Wrapped:\n\n' +
-    Math.round(data.totalHours) + ' hours with AI\n' +
-    data.totalSessions.toLocaleString() + ' sessions\n' +
-    (data.streak || data.activeDays) + '-day streak\n' +
-    'Personality: ' + personality.icon + ' ' + personality.name + '\n\n' +
-    'Get yours:';
+  // 共有のテキストは拡散の経路。画面が日本語なのに英語を投稿すると、
+  // 日本語の層への到達を妨げるので言語を揃える。
+  const pName = personalityName(personality);
+  const text = currentLang === 'ja'
+    ? '私の CC Wrapped:\n\n' +
+      Math.round(data.totalHours) + ' 時間 AI と作業\n' +
+      data.totalSessions.toLocaleString() + ' セッション\n' +
+      (data.streak || data.activeDays) + '日連続\n' +
+      'タイプ: ' + personality.icon + ' ' + pName + '\n\n' +
+      'あなたも:'
+    : 'My CC Wrapped:\n\n' +
+      Math.round(data.totalHours) + ' hours with AI\n' +
+      data.totalSessions.toLocaleString() + ' sessions\n' +
+      (data.streak || data.activeDays) + '-day streak\n' +
+      'Personality: ' + personality.icon + ' ' + personality.name + '\n\n' +
+      'Get yours:';
   const url = 'https://yurukusa.github.io/cc-wrapped/';
   window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url), '_blank');
 }
@@ -1077,15 +1094,22 @@ function shareTwitter() {
 function copyText() {
   if (!data) return;
   const personality = determinePersonality(data);
-  const text = 'CC Wrapped 2026\n' +
-    Math.round(data.totalHours) + ' hours \u00B7 ' + data.totalSessions.toLocaleString() + ' sessions \u00B7 ' + data.totalDaysSpan + ' days\n' +
-    'Streak: ' + (data.streak || data.activeDays) + ' days\n' +
-    'Personality: ' + personality.icon + ' ' + personality.name + '\n' +
-    'https://yurukusa.github.io/cc-wrapped/';
+  const pName = personalityName(personality);
+  const text = currentLang === 'ja'
+    ? 'CC Wrapped 2026\n' +
+      Math.round(data.totalHours) + ' \u6642\u9593 \u00B7 ' + data.totalSessions.toLocaleString() + ' \u30BB\u30C3\u30B7\u30E7\u30F3 \u00B7 ' + data.totalDaysSpan + ' \u65E5\n' +
+      '\u9023\u7D9A: ' + (data.streak || data.activeDays) + ' \u65E5\n' +
+      '\u30BF\u30A4\u30D7: ' + personality.icon + ' ' + pName + '\n' +
+      'https://yurukusa.github.io/cc-wrapped/'
+    : 'CC Wrapped 2026\n' +
+      Math.round(data.totalHours) + ' hours \u00B7 ' + data.totalSessions.toLocaleString() + ' sessions \u00B7 ' + data.totalDaysSpan + ' days\n' +
+      'Streak: ' + (data.streak || data.activeDays) + ' days\n' +
+      'Personality: ' + personality.icon + ' ' + personality.name + '\n' +
+      'https://yurukusa.github.io/cc-wrapped/';
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.querySelector('.share-btn.copy');
     const orig = btn.textContent;
-    btn.textContent = 'Copied!';
+    btn.textContent = currentLang === 'ja' ? '\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F!' : 'Copied!';
     setTimeout(() => btn.textContent = orig, 1500);
   });
 }
